@@ -15,7 +15,7 @@ Usage
 
 This API is built for clean simple access to PUBNUB which automatically deals with threading and
 allows subscriptions to multiple channels. It's only depedency is JSON.NET (http://james.newtonking.com/pages/json-net.aspx / 
-http://json.codeplex.com/)
+http://json.codeplex.com/). Note: this has been tested with .NET 4.0 framework only.
 
 Here is an example of setting up configuration: 
 
@@ -87,7 +87,6 @@ var success = pubnub.Subscribe("my_channel");
 
 ```
 
-For more info, refer to the docs!
 
 Copyright and license
 ---------------------
