@@ -9,17 +9,43 @@ more about the system so we produced this API.
 To get started -- checkout http://www.pubnub.com, get yourself an account and 
 start sending messages.
 
+
 Usage
 -----
 
 This API is built for clean simple access to PUBNUB which automatically deals with threading and
-allows subscriptions to multiple channels. 
+allows subscriptions to multiple channels. It's only depedency is JSON.NET (http://james.newtonking.com/pages/json-net.aspx / 
+http://json.codeplex.com/)
+
+Here is an example of setting up configuration: 
+
+``` csharp
+using com.pubnub.api;
+
+var config = new PubnubConfiguration();
+config.SubscribeKey = "your-subscribe-key";
+config.PublishKey = "your-publish-key";
+config.SecretKey = "your-secret-key";
+
+// Apply the configuration to an instance of the pubnub class
+var pubnub = new Pubnub(config);
+
+```
 
 Here is an example of publishing a message:
 
-``` c#
+``` csharp
 
-var pubnub = new Pubnub();
+// using alternative config method
+var pubnub = new Pubnub("your-publish-key", "your-subscribe-key", "your-secret-key");
+
+// Send an anonymous object, returns a boolean based on the server return code
+var success = pubnub.Publish("example_channel", new
+{
+    Name = "John Appleseed",
+    Age = 30, 
+    Height = "6.1"
+});
 
 ```
 
@@ -27,8 +53,37 @@ Here is an example of subscribing to a channel:
 
 ``` csharp
 
-var pubnub = new Pubnub();
+// setup pubnub
+var pubnub = new Pubnub("your-publish-key", "your-subscribe-key", "your-secret-key");
 
+// setup an event handler
+pubnub.MessageRecieved += (s, e) =>
+{
+    // it's up to us to determine if we want a fire and forget model
+    // any processing done here will block the resubscribe of the pubnub,
+    // channel we might want this, in this case we don't so it sets off a 
+    // task to do all the processing that results from the recieved message,
+    // freeing the pubnub subscribe thread to reconnect to the server and get 
+    // any new messages.
+    Task.Factory.StartNew(() =>
+    {
+        switch (e.Channel)
+        {
+            case "my_channel":
+                Console.WriteLine("Do something with the message");
+                Console.WriteLine(e.Message);
+                break;
+
+            default:
+                break;
+        }
+    });
+};
+
+// returns a boolean if the subscribe was successful, this class
+// prevents multiple subscriptions to the same channel. (Not globally
+// just within each instance)
+var success = pubnub.Subscribe("my_channel");
 
 ```
 
