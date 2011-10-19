@@ -67,6 +67,9 @@ namespace com.pubnub.api.test
 
             Parallel.For(0, 10, (i) =>
             {
+                lock (sync)
+                    list.Add(i, null);
+
                 // System.Diagnostics.Debug.WriteLine(i);
                 var test = (pn.Publish("csharp_throughput_test", new
                 {
@@ -74,11 +77,12 @@ namespace com.pubnub.api.test
                 }));
 
 
-                if (test)
+                if (!test)
+                {
                     lock (sync)
-                        list.Add(i, null);
-                else
+                        list.Remove(i);
                     System.Diagnostics.Debug.WriteLine("Failed: " + i);
+                }
 
             });
 

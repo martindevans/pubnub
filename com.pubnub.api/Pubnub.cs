@@ -210,8 +210,9 @@ namespace com.pubnub.api
                         request.Execute(url, out json);
 
                         var result = JsonConvert.DeserializeObject<List<object>>(json);
+#if DEBUG
                         System.Diagnostics.Debug.WriteLine(json);
-
+#endif
                         if (result[0] is JArray && result[0].ToString() != "[]")
                         {
                             // loop through each message and fire individually                            
