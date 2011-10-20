@@ -8,7 +8,7 @@ using System.Security.Cryptography;
 namespace com.pubnub.api
 {
 
-    public class MD5CryptoServiceProvider : MD5
+    internal class MD5CryptoServiceProvider : MD5
     {
         public MD5CryptoServiceProvider()
             : base()
@@ -19,7 +19,7 @@ namespace com.pubnub.api
     /// <summary>
     /// Summary description for MD5.
     /// </summary>
-    public class MD5 : IDisposable
+    internal class MD5 : IDisposable
     {
         static public MD5 Create(string hashName)
         {

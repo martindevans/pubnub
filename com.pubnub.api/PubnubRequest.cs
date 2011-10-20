@@ -8,14 +8,14 @@ using System.Threading;
 
 namespace com.pubnub.api
 {
-    public sealed class PubnubRequest
+    internal sealed class PubnubRequest
     {
-        public static string BuildUrl(bool enableSsl, params string[] url)
+        internal static string BuildUrl(bool enableSsl, params string[] url)
         {
             var sb = new StringBuilder();
 
             // Add Origin To The Request
-            sb.Append(enableSsl ? "https://" : "http://" + OriginHostname);
+            sb.Append((enableSsl ? "https://" : "http://") + OriginHostname);
 
             // Generate URL with UTF-8 Encoding
             foreach (string part in url)
@@ -31,7 +31,7 @@ namespace com.pubnub.api
             return sb.ToString();
         }
 
-        public static string GetSignature(string publishKey, string subscribeKey, string secretKey, string channel, string json)
+        internal static string GetSignature(string publishKey, string subscribeKey, string secretKey, string channel, string json)
         {
             string signature = "0";
             if (secretKey.Length > 0)
@@ -106,13 +106,13 @@ namespace com.pubnub.api
         /// <summary>
         /// If we are behind a proxy server this object is setup
         /// </summary>
-        public IWebProxy Proxy
+        internal IWebProxy Proxy
         {
             get;
             set;
         }
 
-        public HttpStatusCode Execute(string url, out string json)
+        internal HttpStatusCode Execute(string url, out string json)
         {
             // Default empty Json
             json = "[]";
