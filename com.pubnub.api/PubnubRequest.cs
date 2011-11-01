@@ -145,6 +145,7 @@ namespace com.pubnub.api
                     catch (Exception exp)
                     {
                         System.Diagnostics.Debug.WriteLine("PubnubRequest.Execute: " + exp.Message);
+                        Console.WriteLine("PubnubRequest.Execute: " + exp.Message);
                     }
                     finally
                     {
