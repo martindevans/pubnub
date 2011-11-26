@@ -220,11 +220,21 @@ namespace com.pubnub.api
                             {
                                 var message = ((JArray)result[0])[i].ToString();
                                 if (MessageRecieved != null && !string.IsNullOrEmpty(message))
-                                    MessageRecieved(null, new PubNubEventArgs
+                                    try
                                     {
-                                        Channel = subscription.Channel,
-                                        Message = message
-                                    });
+                                        MessageRecieved(null, new PubNubEventArgs
+                                        {
+                                            Channel = subscription.Channel,
+                                            Message = message
+                                        });
+                                    }
+                                    catch (Exception exp)
+                                    {
+                                        // adding this try catch because if we have multiple messages and one of 
+                                        // them encouters an unhandled exception it should not impact the others 
+                                        // or the subscription time token.
+                                        System.Diagnostics.Debug.WriteLine("MessageRecievedException: " + exp.Message);
+                                    }
                             }
                         }
 
