@@ -185,79 +185,122 @@ namespace com.pubnub.api
                 Publish(channel, new { });
 
             return true;
-        }
+        } 
 
         private void StartSubscription(PubnubSubscription subscription)
         {
             Task.Factory.StartNew(() =>
             {
+                int failureCount = 0;
 
                 // check if the subscription still exists in the dictionary
                 // if not, then end this task, otherwise, repeat.
-                while (_subscriptions.ContainsKey(subscription.Channel))
+                using (var handle = new System.Threading.ManualResetEventSlim(true))
                 {
-                    try
+                    while (_subscriptions.ContainsKey(subscription.Channel))
                     {
-                        var url = PubnubRequest.BuildUrl(PubnubConfiguration.EnableSsl,
-                                                         "subscribe",
-                                                         PubnubConfiguration.SubscribeKey,
-                                                         subscription.Channel,
-                                                         "0",
-                                                         subscription.TimeToken.ToString());
-
-                        var request = new PubnubRequest();
-                        var json = string.Empty;
-                        request.Execute(url, out json);
-
-                        var result = JsonConvert.DeserializeObject<List<object>>(json);
-#if DEBUG
-                        System.Diagnostics.Debug.WriteLine(json);
-#endif
-                        if (result[0] is JArray && result[0].ToString() != "[]")
+                        try
                         {
-                            // loop through each message and fire individually                            
-                            for(var i = 0; i < ((JArray)result[0]).Count; i++)
+                            var url = PubnubRequest.BuildUrl(PubnubConfiguration.EnableSsl,
+                                                             "subscribe",
+                                                             PubnubConfiguration.SubscribeKey,
+                                                             subscription.Channel,
+                                                             "0",
+                                                             subscription.TimeToken.ToString());
+
+                            var request = new PubnubRequest();
+                            var json = string.Empty;
+                            request.Execute(url, out json);
+
+                            var result = JsonConvert.DeserializeObject<List<object>>(json);
+#if DEBUG
+                            System.Diagnostics.Debug.WriteLine(json);
+#endif
+                            if (result[0] is JArray && result[0].ToString() != "[]")
                             {
-                                var message = ((JArray)result[0])[i].ToString();
-                                if (MessageRecieved != null && !string.IsNullOrEmpty(message))
-                                    try
-                                    {
-                                        MessageRecieved(null, new PubNubEventArgs
+                                // loop through each message and fire individually                            
+                                for (var i = 0; i < ((JArray)result[0]).Count; i++)
+                                {
+                                    var message = ((JArray)result[0])[i].ToString();
+                                    if (MessageRecieved != null && !string.IsNullOrEmpty(message))
+                                        try
                                         {
-                                            Channel = subscription.Channel,
-                                            Message = message
-                                        });
-                                    }
-                                    catch (Exception exp)
-                                    {
-                                        // adding this try catch because if we have multiple messages and one of 
-                                        // them encouters an unhandled exception it should not impact the others 
-                                        // or the subscription time token.
-                                        System.Diagnostics.Debug.WriteLine("MessageRecievedException: " + exp.Message);
-                                    }
+                                            MessageRecieved(null, new PubNubEventArgs
+                                            {
+                                                Channel = subscription.Channel,
+                                                Message = message
+                                            });
+                                        }
+                                        catch (Exception exp)
+                                        {
+                                            // adding this try catch because if we have multiple messages and one of 
+                                            // them encouters an unhandled exception it should not impact the others 
+                                            // or the subscription time token.
+                                            System.Diagnostics.Debug.WriteLine("MessageRecievedException: " + exp.Message);
+                                        }
+                                }
                             }
+
+                            // update the time token
+                            lock (_sync)
+                                if (_subscriptions.ContainsKey(subscription.Channel))
+                                    _subscriptions[subscription.Channel].TimeToken = Convert.ToInt64(result[1].ToString());
+
+                            // reset the failure count
+                            failureCount = 0;
                         }
+                        catch (Exception exp)
+                        {
+                            failureCount++;
+                            handle.Wait(GetWaitTimeForErrorCount(failureCount));
 
-                        // update the time token
-                        lock (_sync)
-                            if (_subscriptions.ContainsKey(subscription.Channel))
-                                _subscriptions[subscription.Channel].TimeToken = Convert.ToInt64(result[1].ToString());
-                    }
-                    catch (Exception exp)
-                    {
-                        System.Diagnostics.Debug.WriteLine("SubscriptionException: " + exp.Message);
+                            System.Diagnostics.Debug.WriteLine("SubscriptionException: " + exp.Message);
 
-                        // rather than throwing the errors, we collect them for 
-                        // periodic analysis, the idea is to enhance this with error limits
-                        // and a backoff strategy incase there is a problem with Pubnub
-                        // or the local connection to pubnub
-                        lock (_sync)
-                            if (_subscriptions.ContainsKey(subscription.Channel))
-                                _subscriptions[subscription.Channel].Errors.Add(exp);
+                            // rather than throwing the errors, we collect them for 
+                            // periodic analysis, the idea is to enhance this with error limits
+                            // and a backoff strategy incase there is a problem with Pubnub
+                            // or the local connection to pubnub
+                            lock (_sync)
+                                if (_subscriptions.ContainsKey(subscription.Channel))
+                                    _subscriptions[subscription.Channel].Errors.Add(exp);
+                        }
                     }
                 }
 
             });
+        }
+
+        /// <summary>
+        /// Manages the backoff based on the current error count, this prevents high 
+        /// CPU usage in the case of a network interuption to either pubnub or 
+        /// our local server's connectivity.
+        /// </summary>
+        /// <param name="errors"></param>
+        /// <returns></returns>
+        private int GetWaitTimeForErrorCount(int errors)
+        {
+            if (errors < 5)
+                return 0;
+            
+            if (errors < 10)
+                return 1000;
+
+            if (errors < 20)
+                return 2000;
+
+            if (errors < 30)
+                return 3000;
+
+            if (errors < 40)
+                return 4000;
+
+            if (errors < 50)
+                return 5000;
+
+            if (errors < 100)
+                return 10000;
+
+            return 15000;
         }
 
         public event EventHandler<PubNubEventArgs> MessageRecieved;
