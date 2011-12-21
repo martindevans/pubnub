@@ -195,7 +195,7 @@ namespace com.pubnub.api
 
                 // check if the subscription still exists in the dictionary
                 // if not, then end this task, otherwise, repeat.
-                using (var handle = new System.Threading.ManualResetEventSlim(true))
+                using (var handle = new System.Threading.ManualResetEventSlim(false))
                 {
                     while (_subscriptions.ContainsKey(subscription.Channel))
                     {
@@ -250,11 +250,11 @@ namespace com.pubnub.api
                             failureCount = 0;
                         }
                         catch (Exception exp)
-                        {
+                        {                            
+                            System.Diagnostics.Debug.WriteLine("SubscriptionException: " + exp.Message);
+                            
                             failureCount++;
                             handle.Wait(GetWaitTimeForErrorCount(failureCount));
-
-                            System.Diagnostics.Debug.WriteLine("SubscriptionException: " + exp.Message);
 
                             // rather than throwing the errors, we collect them for 
                             // periodic analysis, the idea is to enhance this with error limits
