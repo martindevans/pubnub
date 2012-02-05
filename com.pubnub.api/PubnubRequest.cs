@@ -149,7 +149,8 @@ namespace com.pubnub.api
                     }
                     finally
                     {
-                        handle.Set();
+                        if (handle != null)
+                            handle.Set();
                     }
 
                 }, new object() /* state */);

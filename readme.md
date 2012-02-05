@@ -88,7 +88,7 @@ var success = pubnub.Subscribe("my_channel");
 ```
 
 
-Copyright and license
+Copyright & License
 ---------------------
 
 Copyright 2011 PressF12 Pty Ltd
