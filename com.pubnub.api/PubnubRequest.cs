@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.IO;
 using System.Net;
@@ -126,39 +127,27 @@ namespace com.pubnub.api
             request.ServicePoint.ConnectionLimit = 100;
             request.Timeout = RequestTimeout;
 
-            using (var handle = new ManualResetEvent(false))
+            try
             {
-                request.BeginGetResponse(ar =>
+                var response = (HttpWebResponse)request.GetResponse();
+
+                using (var receiveStream = response.GetResponseStream())
                 {
-                    try
+                    Debug.Assert(receiveStream != null, "receiveStream != null");
+                    using (var readStream = new StreamReader(receiveStream, Encoding.ASCII))
                     {
-                        var response = (HttpWebResponse)request.EndGetResponse(ar);
-
-                        using (var receiveStream = response.GetResponseStream())
-                        using (var readStream = new StreamReader(receiveStream, Encoding.ASCII))
-                        {
-                            Data = readStream.ReadToEnd();
-                        }
-
-                        Status = response.StatusCode;
+                        Data = readStream.ReadToEnd();
                     }
-                    catch (Exception exp)
-                    {
-                        System.Diagnostics.Debug.WriteLine("PubnubRequest.Execute: " + exp.Message);
-                        Console.WriteLine("PubnubRequest.Execute: " + exp.Message);
-                    }
-                    finally
-                    {
-                        if (handle != null)
-                            handle.Set();
-                    }
+                }
 
-                }, new object() /* state */);
-
-                // In case the first timeout doesn't work then move onto then
-                // we'll let the wait request handle timeout as well
-                handle.WaitOne(RequestTimeout + (RequestTimeout / 10));
+                Status = response.StatusCode;
             }
+            catch (Exception exp)
+            {
+                Debug.WriteLine("PubnubRequest.Execute: " + exp.Message);
+                Console.WriteLine("PubnubRequest.Execute: " + exp.Message);
+            }
+
             json = Data;
             return Status;
         }
