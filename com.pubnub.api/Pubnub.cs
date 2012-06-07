@@ -99,7 +99,7 @@ namespace com.pubnub.api
             // so apparently S & D are valid response codes, but I need to check this with SB
             // I also need to find out what an error message looks like
             var o = JArray.Parse(reply);
-            return (o.Count == 2 && (o[1].ToString() == "S" || o[1].ToString() == "D"));
+            return (int.Parse(o[0].ToString()) == 1);
         }
 
         public List<object> History(string channel, int limit)
