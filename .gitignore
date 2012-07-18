@@ -7,3 +7,10 @@
 /Example/bin
 /Example/obj
 *.suo
+/src/TestResults
+/src/com.pubnub.api/bin
+/src/com.pubnub.api/obj
+/src/com.pubnub.api.test/obj
+/src/com.pubnub.api.test/bin
+/src/Example/obj
+/src/Example/bin
