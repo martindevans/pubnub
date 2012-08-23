@@ -127,6 +127,9 @@ namespace com.pubnub.api
             request.ServicePoint.ConnectionLimit = 100;
             request.Timeout = RequestTimeout;
 
+            // when the request started so we can see patterns to timeouts etc
+            DateTime started = DateTime.Now;
+
             try
             {
                 var response = (HttpWebResponse)request.GetResponse();
@@ -146,7 +149,10 @@ namespace com.pubnub.api
             {
                 Debug.WriteLine("PubnubRequest.Execute: " + exp.Message);
                 Console.WriteLine("PubnubRequest.Execute: " + exp.Message);
+                Console.WriteLine("Execution Took: " + (DateTime.Now - started).TotalSeconds + " seconds");
             }
+
+            
 
             json = Data;
             return Status;
