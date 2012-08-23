@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
 using System.Text;
+using System.Threading;
 
 namespace com.pubnub.api
 {
@@ -21,6 +22,8 @@ namespace com.pubnub.api
                 {
                     instance = new PubnubConfiguration();
                     instance.GetFromFile();
+
+                    Interlocked.CompareExchange(ref instance, instance, null);
                 }
                 return instance;            
             }

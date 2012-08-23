@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Threading.Tasks;
@@ -17,19 +18,12 @@ namespace com.pubnub.api
     {
 
         #region // Constructors //
-        public Pubnub()
-        {
-            _subscriptions = new Dictionary<string, PubnubSubscription>();
-        }
-
         public Pubnub(PubnubConfiguration configuration)
-            : this()
         {
             PubnubConfiguration = configuration;
         }
 
         public Pubnub(string publishKey, string subscribeKey, string secretKey)
-            : this()
         {
             PubnubConfiguration = new PubnubConfiguration
             {
@@ -41,7 +35,6 @@ namespace com.pubnub.api
         }
 
         public Pubnub(string publishKey, string subscribeKey, string secretKey, bool enableSsl)
-            : this()
         {
             PubnubConfiguration = new PubnubConfiguration
             {
@@ -54,8 +47,7 @@ namespace com.pubnub.api
         #endregion
 
         #region // Properties //
-        private readonly object _sync = new object();
-        private readonly Dictionary<string, PubnubSubscription> _subscriptions;
+        private readonly ConcurrentDictionary<string, PubnubSubscription> _subscriptions = new ConcurrentDictionary<string, PubnubSubscription>();
 
         public PubnubConfiguration PubnubConfiguration
         {
@@ -142,19 +134,17 @@ namespace com.pubnub.api
         /// <returns></returns>
         public bool Subscribe(string channel)
         {
-            // Check if there a subscribtion to this channel already
-            if (_subscriptions.ContainsKey(channel))
-                return false;
+            var subscription = new PubnubSubscription
+            {
+                Channel = channel,
+                TimeToken = 0
+            };
 
             // Add a new one
-            lock (_sync)
-                _subscriptions.Add(channel, new PubnubSubscription
-                {
-                    Channel = channel,
-                    TimeToken = 0
-                });
+            if (!_subscriptions.TryAdd(channel, subscription))
+                return false; //Subscription already exists
 
-            StartSubscription(_subscriptions[channel]);
+            StartSubscription(subscription);
             return true;
         }
 
@@ -171,11 +161,9 @@ namespace com.pubnub.api
         /// <returns></returns>
         public bool Unsubscribe(string channel, bool force)
         {
-            if (!_subscriptions.ContainsKey(channel))
+            PubnubSubscription removed;
+            if (!_subscriptions.TryRemove(channel, out removed))
                 return false;
-
-            lock (_sync)
-                _subscriptions.Remove(channel);
 
             // send a blank message to the channel so the 
             // loop cycles to find the unsubcribe...
@@ -240,9 +228,9 @@ namespace com.pubnub.api
                             }
 
                             // update the time token
-                            lock (_sync)
-                                if (_subscriptions.ContainsKey(subscription.Channel))
-                                    _subscriptions[subscription.Channel].TimeToken = Convert.ToInt64(result[1].ToString());
+                            PubnubSubscription retrievedSubscription;
+                            if (_subscriptions.TryGetValue(subscription.Channel, out retrievedSubscription))
+                                retrievedSubscription.TimeToken = Convert.ToInt64(result[1].ToString());
 
                             // reset the failure count
                             failureCount = 0;
@@ -258,9 +246,9 @@ namespace com.pubnub.api
                             // periodic analysis, the idea is to enhance this with error limits
                             // and a backoff strategy incase there is a problem with Pubnub
                             // or the local connection to pubnub
-                            lock (_sync)
-                                if (_subscriptions.ContainsKey(subscription.Channel))
-                                    _subscriptions[subscription.Channel].Errors.Add(exp);
+                            PubnubSubscription retrievedSubscription;
+                            if (_subscriptions.TryGetValue(subscription.Channel, out retrievedSubscription))
+                                retrievedSubscription.Errors.Add(exp);
                         }
                     }
                 }
