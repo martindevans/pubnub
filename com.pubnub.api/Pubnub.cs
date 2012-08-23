@@ -1,12 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.Globalization;
 using System.Threading.Tasks;
-
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Newtonsoft.Json.Serialization;
 
 namespace com.pubnub.api
 {
@@ -58,7 +55,7 @@ namespace com.pubnub.api
 
         #region // Properties //
         private readonly object _sync = new object();
-        private Dictionary<string, PubnubSubscription> _subscriptions;
+        private readonly Dictionary<string, PubnubSubscription> _subscriptions;
 
         public PubnubConfiguration PubnubConfiguration
         {
@@ -75,6 +72,7 @@ namespace com.pubnub.api
         /// <summary>
         /// 
         /// </summary>
+        /// <param name="channel"> </param>
         /// <param name="json">A valid json string, if this is invalid we cannot be held accountable for the outcome...</param>
         /// <returns></returns>
         public bool Publish(string channel, string json)
@@ -93,7 +91,7 @@ namespace com.pubnub.api
                                              json);
 
             var request = new PubnubRequest();
-            var reply = string.Empty;
+            string reply;
             request.Execute(url, out reply);
 
             // so apparently S & D are valid response codes, but I need to check this with SB
@@ -109,10 +107,10 @@ namespace com.pubnub.api
                                              PubnubConfiguration.SubscribeKey,
                                              channel,
                                              "0",
-                                             limit.ToString());
+                                             limit.ToString(CultureInfo.InvariantCulture));
 
             var request = new PubnubRequest();
-            var json = string.Empty;
+            string json;
             request.Execute(url, out json);
 
             var list = JsonConvert.DeserializeObject<List<object>>(json);
@@ -130,7 +128,7 @@ namespace com.pubnub.api
                                              "0");
 
             var request = new PubnubRequest();
-            var json = string.Empty;
+            string json;
             request.Execute(url, out json);
 
             return Convert.ToInt64(JArray.Parse(json)[0].ToString());
@@ -206,10 +204,10 @@ namespace com.pubnub.api
                                                              PubnubConfiguration.SubscribeKey,
                                                              subscription.Channel,
                                                              "0",
-                                                             subscription.TimeToken.ToString());
+                                                             subscription.TimeToken.ToString(CultureInfo.InvariantCulture));
 
                             var request = new PubnubRequest();
-                            var json = string.Empty;
+                            string json;
                             request.Execute(url, out json);
 
                             var result = JsonConvert.DeserializeObject<List<object>>(json);
